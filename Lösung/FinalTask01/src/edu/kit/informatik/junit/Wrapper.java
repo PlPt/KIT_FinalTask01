@@ -1,6 +1,6 @@
 package edu.kit.informatik.junit;
 
-import de.plpt.Main;
+import de.plpt.Connect6.Main;
 
 /**
  * Wrapper class for testing. This is used to access the main Method of
