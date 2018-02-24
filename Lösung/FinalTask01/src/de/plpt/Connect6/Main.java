@@ -15,9 +15,8 @@ public class Main {
         try {
             CommandProcessor processor = new CommandProcessor(args);
             processor.processCommands();
-        } catch (IllegalArgumentException x) {
+        } catch (IllegalArgumentException | NullPointerException x) {
             Terminal.printError(String.format("[%s] : %s", x.getClass().getName(), x.getMessage()));
-
         }
     }
 }

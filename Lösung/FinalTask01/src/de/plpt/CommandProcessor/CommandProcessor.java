@@ -109,7 +109,8 @@ public class CommandProcessor {
                 Terminal.printError(String.format("[ArgumentParserException] :: %s", apex.getMessage()));
 
             } catch (IllegalArgumentException x) {
-                Terminal.printError(String.format("[IllegalArgumentException][%s] :: %s", x.getClass().getName(), x.getMessage()));
+                Terminal.printError(String.format("[IllegalArgumentException][%s] :: %s",
+                        x.getClass().getName(), x.getMessage()));
             } catch (IntervalViolationException e) {
                 Terminal.printError(String.format("[IntervalViolationException] : %s", e.getMessage()));
             }
