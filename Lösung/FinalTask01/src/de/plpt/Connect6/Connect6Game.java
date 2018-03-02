@@ -1,9 +1,11 @@
 package de.plpt.Connect6;
 
-import com.google.common.collect.Lists;
+
 import de.plpt.Connect6.exceptions.Connect6GameException;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 public class Connect6Game {
@@ -14,6 +16,7 @@ public class Connect6Game {
     private GameBoard board;
     private Player winner = null;
     //endregion
+
 
     //region constructor
 
@@ -153,16 +156,84 @@ public class Connect6Game {
      * @return true if the player won
      */
     public boolean checkWinner(CellPosition position, Player player) {
+
         CellPosition realPosition = position;
         if (fieldType == GameFieldType.TORUS) realPosition = position.convertToNormal(gameSize);
+
+
         Cell c = board.getCell(realPosition);
+
         if (!c.getPlayer().equals(player)) {
             throw new IllegalStateException("Given cell owner isn't given Player");
         }
+
+
+        boolean checkHorizontal = checkLine(player, realPosition, new ILineDataProvider() {
+            @Override
+            public List<Cell> getLine(CellPosition realPosition) {
+                return board.getCells(realPosition.getCellIndex());
+            }
+        });
+
+        if (checkHorizontal) return true;
+
+
+        boolean checkVertical = checkLine(player, realPosition, new ILineDataProvider() {
+            @Override
+            public List<Cell> getLine(CellPosition realPosition) {
+                return board.getRow(realPosition.getRowIndex()).getCells();
+            }
+        });
+
+        if (checkVertical) return true;
+
+
+        CellPosition next = new CellPosition(-1, realPosition.getCellIndex()
+                - realPosition.getRowIndex() - 1).convertToNormal(gameSize);
+
+
+        boolean ne2SWDiag = checkDiagonal(player, realPosition, next, new ILineDataProvider() {
+            @Override
+            public List<Cell> getLine(CellPosition realPosition) {
+                return board.getDiagonalNE2SW(realPosition.getRowIndex(), realPosition.getCellIndex());
+            }
+
+        });
+
+        if (ne2SWDiag) return true;
+
+        boolean nw2SEDiag = checkDiagonal(player, realPosition, next, new ILineDataProvider() {
+            @Override
+            public List<Cell> getLine(CellPosition realPosition) {
+                return board.getDiagonalNW2SE(realPosition.getRowIndex(), realPosition.getCellIndex());
+            }
+
+        });
+
+        if (nw2SEDiag) return true;
+
+
+        return false;
+    }
+//endregion
+
+    //region checkLine
+
+    /**
+     * Checks if player is winner on horizontal or vertical line, depending on implementation of ILineDataProvider
+     *
+     * @param player           Player to check if it's the winner
+     * @param realPosition     CellPosition of cell to check it's line
+     * @param lineDataProvider DataProvider for Cell data
+     * @return true if given Player won in this line, false otherwise
+     */
+    private boolean checkLine(Player player, CellPosition realPosition, ILineDataProvider lineDataProvider) {
         int count = 0;
+
         List<Cell> cellList = new ArrayList<Cell>();
-        cellList.addAll(board.getCells(realPosition.getCellIndex()));
+        cellList.addAll(lineDataProvider.getLine(realPosition));
         if (this.fieldType == GameFieldType.TORUS) cellList.addAll(cellList);
+
         for (Cell cell : cellList) {
             if (cell.getPlayer().equals(player)) {
                 count++;
@@ -171,36 +242,33 @@ public class Connect6Game {
             }
             if (count >= 6) return true;
         }
-        count = 0;
-        cellList = new ArrayList<Cell>();
-        cellList.addAll(board.getRow(realPosition.getRowIndex()).getCells());
-        if (fieldType == GameFieldType.TORUS) cellList.addAll(cellList);
-        for (Cell cell : cellList) {
-            if (cell.getPlayer().equals(player)) {
-                count++;
-            } else {
-                count = 0;
-            }
+        return false;
+    }
+    //endregion
 
-            if (count >= 6) return true;
-        }
-        count = 0;
-        CellPosition next;
-        int t1 = realPosition.getRowIndex();
-        int t2 = realPosition.getCellIndex();
-        t2 = t2 - t1;
-        t1 = 0;
-        next = new CellPosition(-1, t2 - 1).convertToNormal(gameSize);
+    //region checkDiagonal
 
-        CellPosition nexxt = new CellPosition(-2, next.getCellIndex() - next.getRowIndex() - 2)
-                .convertToNormal(gameSize);
-        boolean isSameDig = nexxt.equals(realPosition);
-        List<Cell> diag1 = new ArrayList<>();
-        diag1.addAll(board.getDiagonalNE2SW(realPosition.getRowIndex(), realPosition.getCellIndex()));
+    /**
+     * Checks if player is  winner in a diagonal line
+     * Type of diagonal depends on ILineProvider implementation
+     *
+     * @param player               Player to check win
+     * @param realPositin          Position of cell to get it's diagonal
+     * @param nextPosition         Position of next diagonal cell
+     * @param diagonalDataProvider DataProvider for diagonalData
+     * @return true if given player won, false otherwise
+     */
+    private boolean checkDiagonal(Player player, CellPosition realPositin, CellPosition nextPosition,
+                                  ILineDataProvider diagonalDataProvider) {
+        int count = 0;
+        List<Cell> diag1 = new ArrayList<Cell>();
+        diag1.addAll(diagonalDataProvider.getLine(realPositin));
+        List<Cell> cells2 = (diagonalDataProvider.getLine(nextPosition));
+        boolean isSameDig = new HashSet<>(diag1).equals(new HashSet<>(cells2));
         if (fieldType == GameFieldType.TORUS) {
             if (!isSameDig) {
-                List<Cell> cells2 = ((board.getDiagonalNE2SW(next.getRowIndex(), next.getCellIndex())));
-                diag1 = Lists.reverse(diag1);
+                Collections.reverse(diag1);
+                if (cells2.get(cells2.size() - 1).getPlayer().equals(player)) Collections.reverse(cells2);
                 for (Cell cc : cells2) {
                     if (!diag1.contains(cc)) {
                         diag1.add(cc);
@@ -210,35 +278,8 @@ public class Connect6Game {
                 diag1.addAll(diag1);
             }
         }
-        //  System.out.println("diag1");
         for (Cell cell : diag1) {
-            //  System.out.println("[" + cell.getPosition() + "]" + cell.getPlayer());
-            if (cell.getPlayer().equals(player)) {
-                count++;
-            } else {
-                count = 0;
-            }
-            if (count >= 6) return true;
-        }
-        count = 0;
-        List<Cell> diag2 = new ArrayList<>();
-        diag2.addAll(board.getDiagonalNW2SE(realPosition.getRowIndex(), realPosition.getCellIndex()));
-        if (fieldType == GameFieldType.TORUS) {
-            if (!isSameDig) {
-                List<Cell> cells2 = ((board.getDiagonalNW2SE(next.getRowIndex(), next.getCellIndex())));
-                diag2 = Lists.reverse(diag2);
-                for (Cell cc : cells2) {
-                    if (!diag2.contains(cc)) {
-                        diag2.add(cc);
-                    }
-                }
-            } else {
-                diag2.addAll(diag2);
-            }
-        }
-        //System.out.println("diag2");
-        for (Cell cell : diag2) {
-            //  System.out.println("[" + cell.getPosition() + "]" + cell.getPlayer());
+
             if (cell.getPlayer().equals(player)) {
                 count++;
             } else {
@@ -270,6 +311,23 @@ public class Connect6Game {
      */
     public void setWinner(Player winner) {
         this.winner = winner;
+    }
+    //endregion
+
+    //region ILineDataProvider
+
+    /**
+     * DataProvider Interface for all Line checks
+     */
+    interface ILineDataProvider {
+        /**
+         * Returns a List of cells in a specific line on board
+         * List content depends on implementation
+         *
+         * @param realPosition Position of Cell in line
+         * @return List of cells in specific lines
+         */
+        List<Cell> getLine(CellPosition realPosition);
     }
     //endregion
 }
