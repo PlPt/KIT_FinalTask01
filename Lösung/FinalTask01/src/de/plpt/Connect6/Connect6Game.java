@@ -80,7 +80,7 @@ public class Connect6Game {
                     , c1.getPosition(), c1.getPlayer()));
         } else if (!c2.isEmpty()) {
             throw new Connect6GameException(String.format("Cell at %s is already used by %s"
-                    , c1.getPosition(), c1.getPlayer()));
+                    , c2.getPosition(), c2.getPlayer()));
         }
 
         c1.setPlayer(currPlayer);

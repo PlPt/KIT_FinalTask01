@@ -28,6 +28,7 @@ public class ArgumentParserExecutionException extends ArgumentParserException {
      * @param <T> Type of cause Exception
      * @return Typed Cause Exception
      */
+    @SuppressWarnings("unchecked")
     public <T extends Exception> T getTypedCause() {
         return (T) this.getCause();
     }
